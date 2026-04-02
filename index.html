@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Exam Countdown Timer</title>
+  <style>
+    :root {
+      --bg: #111827;
+      --panel: #1f2937;
+      --panel-2: #374151;
+      --text: #f9fafb;
+      --muted: #d1d5db;
+      --accent: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --shadow: 0 14px 40px rgba(0, 0, 0, 0.25);
+      --radius: 18px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: linear-gradient(180deg, #0f172a 0%, var(--bg) 100%);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    .page {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 24px;
+      display: grid;
+      gap: 20px;
+    }
+
+    .card {
+      background: rgba(31, 41, 55, 0.95);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 22px;
+    }
+
+    .header {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      align-items: center;
+      text-align: center;
+    }
+
+    .label {
+      font-size: 0.9rem;
+      color: var(--muted);
+      margin-bottom: 6px;
+      letter-spacing: 0.02em;
+    }
+
+    .value {
+      font-size: 1.3rem;
+      font-weight: 700;
+    }
+
+    .controls-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(120px, 1fr));
+      gap: 14px;
+      align-items: end;
+    }
+
+    .field label {
+      display: block;
+      font-size: 0.95rem;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    input[type="number"],
+    textarea {
+      width: 100%;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: #0b1220;
+      color: var(--text);
+      border-radius: 12px;
+      padding: 14px 14px;
+      font-size: 1rem;
+      outline: none;
+    }
+
+    input[type="number"]:focus,
+    textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+    }
+
+    .button-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      justify-content: center;
+    }
+
+    button {
+      border: none;
+      border-radius: 14px;
+      padding: 14px 18px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      min-width: 120px;
+      transition: transform 0.08s ease, opacity 0.2s ease;
+    }
+
+    button:hover { opacity: 0.95; }
+    button:active { transform: translateY(1px); }
+    button:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    .start { background: var(--accent); color: #052e26; }
+    .pause { background: var(--warning); color: #1f1300; }
+    .reset { background: #94a3b8; color: #0f172a; }
+    .full { background: #60a5fa; color: #082f49; }
+
+    .timer-wrap {
+      text-align: center;
+      padding: 28px 18px;
+    }
+
+    .status {
+      font-size: 1rem;
+      color: var(--muted);
+      margin-bottom: 10px;
+      min-height: 1.2em;
+    }
+
+    .countdown {
+      font-weight: 800;
+      line-height: 1;
+      font-size: clamp(4rem, 14vw, 10rem);
+      letter-spacing: 0.03em;
+      margin: 12px 0;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .subnote {
+      margin-top: 8px;
+      font-size: 1rem;
+      color: var(--muted);
+    }
+
+    .message-box h2 {
+      margin: 0 0 12px;
+      font-size: 1.3rem;
+    }
+
+    textarea {
+      min-height: 140px;
+      resize: vertical;
+      font-family: inherit;
+    }
+
+    .warning-state .countdown { color: var(--warning); }
+    .danger-state .countdown { color: var(--danger); }
+    .ended-state .countdown {
+      color: var(--danger);
+      text-shadow: 0 0 22px rgba(239, 68, 68, 0.35);
+    }
+
+    @media (max-width: 780px) {
+      .header { grid-template-columns: 1fr; }
+      .controls-grid { grid-template-columns: 1fr 1fr; }
+    }
+
+    @media (max-width: 520px) {
+      .controls-grid { grid-template-columns: 1fr; }
+      .page { padding: 14px; }
+      .card { padding: 16px; }
+      button { width: 100%; }
+      .button-row { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="card header">
+      <div>
+        <div class="label">Starting Time</div>
+        <div class="value" id="startingTime">Not started</div>
+      </div>
+      <div>
+        <div class="label">Today’s Date</div>
+        <div class="value" id="todayDate"></div>
+      </div>
+      <div>
+        <div class="label">Current Status</div>
+        <div class="value" id="currentState">Ready</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="controls-grid">
+        <div class="field">
+          <label for="hoursInput">Hours</label>
+          <input id="hoursInput" type="number" min="0" max="23" value="1" />
+        </div>
+        <div class="field">
+          <label for="minutesInput">Minutes</label>
+          <input id="minutesInput" type="number" min="0" max="59" value="0" />
+        </div>
+        <div class="field">
+          <label for="secondsInput">Seconds</label>
+          <input id="secondsInput" type="number" min="0" max="59" value="0" />
+        </div>
+        <div class="field">
+          <label for="endAlert">End Alert</label>
+          <input id="endAlert" type="number" min="1" max="60" value="5" />
+        </div>
+      </div>
+
+      <div class="button-row" style="margin-top: 18px;">
+        <button class="start" id="startBtn">Start</button>
+        <button class="pause" id="pauseBtn" disabled>Pause</button>
+        <button class="reset" id="resetBtn">Reset</button>
+        <button class="full" id="fullscreenBtn">Fullscreen</button>
+      </div>
+    </div>
+
+    <div class="card timer-wrap" id="timerCard">
+      <div class="status" id="statusText">Enter a duration and press Start.</div>
+      <div class="countdown" id="countdown">01:00:00</div>
+      <div class="subnote">The display changes color during the final minutes.</div>
+    </div>
+
+    <div class="card message-box">
+      <h2>Message Field</h2>
+      <textarea id="messageInput" placeholder="Type messages here, for example: ‘You have 15 minutes remaining.’"></textarea>
+    </div>
+  </div>
+
+  <script>
+    const hoursInput = document.getElementById('hoursInput');
+    const minutesInput = document.getElementById('minutesInput');
+    const secondsInput = document.getElementById('secondsInput');
+    const endAlert = document.getElementById('endAlert');
+    const startingTime = document.getElementById('startingTime');
+    const todayDate = document.getElementById('todayDate');
+    const currentState = document.getElementById('currentState');
+    const statusText = document.getElementById('statusText');
+    const countdown = document.getElementById('countdown');
+    const timerCard = document.getElementById('timerCard');
+
+    const startBtn = document.getElementById('startBtn');
+    const pauseBtn = document.getElementById('pauseBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const fullscreenBtn = document.getElementById('fullscreenBtn');
+
+    let totalSeconds = 3600;
+    let remainingSeconds = totalSeconds;
+    let timerId = null;
+    let isPaused = false;
+    let originalDurationText = '01:00:00';
+
+    function setTodayDate() {
+      const now = new Date();
+      todayDate.textContent = now.toLocaleDateString(undefined, {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    }
+
+    function pad(n) {
+      return String(n).padStart(2, '0');
+    }
+
+    function formatTime(seconds) {
+      const hrs = Math.floor(seconds / 3600);
+      const mins = Math.floor((seconds % 3600) / 60);
+      const secs = seconds % 60;
+      return `${pad(hrs)}:${pad(mins)}:${pad(secs)}`;
+    }
+
+    function readInputs() {
+      const h = Math.max(0, parseInt(hoursInput.value || '0', 10));
+      const m = Math.max(0, parseInt(minutesInput.value || '0', 10));
+      const s = Math.max(0, parseInt(secondsInput.value || '0', 10));
+      return (h * 3600) + (m * 60) + s;
+    }
+
+    function updateDisplay() {
+      countdown.textContent = formatTime(remainingSeconds);
+
+      timerCard.classList.remove('warning-state', 'danger-state', 'ended-state');
+      const alertMinutes = Math.max(1, parseInt(endAlert.value || '5', 10));
+      const warningThreshold = alertMinutes * 60;
+
+      if (remainingSeconds === 0) {
+        timerCard.classList.add('ended-state');
+      } else if (remainingSeconds <= 60) {
+        timerCard.classList.add('danger-state');
+      } else if (remainingSeconds <= warningThreshold) {
+        timerCard.classList.add('warning-state');
+      }
+    }
+
+    function lockInputs(locked) {
+      hoursInput.disabled = locked;
+      minutesInput.disabled = locked;
+      secondsInput.disabled = locked;
+    }
+
+    function startTimer() {
+      const selectedSeconds = readInputs();
+      if (selectedSeconds <= 0) {
+        alert('Please enter a countdown time greater than zero.');
+        return;
+      }
+
+      clearInterval(timerId);
+      totalSeconds = selectedSeconds;
+      remainingSeconds = selectedSeconds;
+      originalDurationText = formatTime(totalSeconds);
+      startingTime.textContent = originalDurationText;
+      currentState.textContent = 'Running';
+      statusText.textContent = 'Countdown in progress.';
+
+      lockInputs(true);
+      startBtn.disabled = true;
+      pauseBtn.disabled = false;
+      pauseBtn.textContent = 'Pause';
+      isPaused = false;
+      updateDisplay();
+
+      timerId = setInterval(() => {
+        if (remainingSeconds > 0) {
+          remainingSeconds -= 1;
+          updateDisplay();
+        } else {
+          clearInterval(timerId);
+          currentState.textContent = 'Finished';
+          statusText.textContent = 'Time is up.';
+          startBtn.disabled = true;
+          pauseBtn.disabled = true;
+        }
+      }, 1000);
+    }
+
+    function pauseResumeTimer() {
+      if (!timerId && remainingSeconds > 0 && remainingSeconds < totalSeconds) {
+        return;
+      }
+
+      if (!isPaused) {
+        clearInterval(timerId);
+        isPaused = true;
+        currentState.textContent = 'Paused';
+        statusText.textContent = 'Countdown paused.';
+        pauseBtn.textContent = 'Resume';
+      } else {
+        currentState.textContent = 'Running';
+        statusText.textContent = 'Countdown in progress.';
+        pauseBtn.textContent = 'Pause';
+        isPaused = false;
+        timerId = setInterval(() => {
+          if (remainingSeconds > 0) {
+            remainingSeconds -= 1;
+            updateDisplay();
+          } else {
+            clearInterval(timerId);
+            currentState.textContent = 'Finished';
+            statusText.textContent = 'Time is up.';
+            startBtn.disabled = true;
+            pauseBtn.disabled = true;
+          }
+        }, 1000);
+      }
+    }
+
+    function resetTimer() {
+      clearInterval(timerId);
+      timerId = null;
+      isPaused = false;
+      totalSeconds = readInputs() || 3600;
+      remainingSeconds = totalSeconds;
+      startingTime.textContent = 'Not started';
+      currentState.textContent = 'Ready';
+      statusText.textContent = 'Enter a duration and press Start.';
+      startBtn.disabled = false;
+      pauseBtn.disabled = true;
+      pauseBtn.textContent = 'Pause';
+      lockInputs(false);
+      updateDisplay();
+    }
+
+    async function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        await document.documentElement.requestFullscreen();
+      } else {
+        await document.exitFullscreen();
+      }
+    }
+
+    function syncPreviewFromInputs() {
+      if (!timerId) {
+        totalSeconds = readInputs() || 3600;
+        remainingSeconds = totalSeconds;
+        updateDisplay();
+      }
+    }
+
+    startBtn.addEventListener('click', startTimer);
+    pauseBtn.addEventListener('click', pauseResumeTimer);
+    resetBtn.addEventListener('click', resetTimer);
+    fullscreenBtn.addEventListener('click', toggleFullscreen);
+    hoursInput.addEventListener('input', syncPreviewFromInputs);
+    minutesInput.addEventListener('input', syncPreviewFromInputs);
+    secondsInput.addEventListener('input', syncPreviewFromInputs);
+
+    setTodayDate();
+    updateDisplay();
+  </script>
+</body>
+</html>
