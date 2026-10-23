@@ -281,6 +281,26 @@
     let isPaused = false;
     let originalDurationText = '01:00:00';
 
+    // Keep the screen awake while the countdown runs (the Screen Wake Lock API). Browsers drop
+    // the lock when the page is hidden, so it is taken again when the page is shown.
+    let wakeLock = null;
+    let wantAwake = false;
+    async function keepAwake(on) {
+      wantAwake = on;
+      try {
+        if (on && !wakeLock && 'wakeLock' in navigator && document.visibilityState === 'visible') {
+          wakeLock = await navigator.wakeLock.request('screen');
+          wakeLock.addEventListener('release', () => { wakeLock = null; });
+        } else if (!on && wakeLock) {
+          await wakeLock.release();
+          wakeLock = null;
+        }
+      } catch (e) { /* not supported or not allowed: the timer still works */ }
+    }
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && wantAwake) keepAwake(true);
+    });
+
     function setTodayDate() {
       const now = new Date();
       todayDate.textContent = now.toLocaleDateString(undefined, {
@@ -352,6 +372,7 @@
       pauseBtn.textContent = 'Pause';
       isPaused = false;
       updateDisplay();
+      keepAwake(true);
 
       timerId = setInterval(() => {
         if (remainingSeconds > 0) {
@@ -359,6 +380,7 @@
           updateDisplay();
         } else {
           clearInterval(timerId);
+          keepAwake(false);
           currentState.textContent = 'Finished';
           statusText.textContent = 'Time is up.';
           startBtn.disabled = true;
@@ -374,6 +396,7 @@
 
       if (!isPaused) {
         clearInterval(timerId);
+        keepAwake(false);
         isPaused = true;
         currentState.textContent = 'Paused';
         statusText.textContent = 'Countdown paused.';
@@ -383,12 +406,14 @@
         statusText.textContent = 'Countdown in progress.';
         pauseBtn.textContent = 'Pause';
         isPaused = false;
+        keepAwake(true);
         timerId = setInterval(() => {
           if (remainingSeconds > 0) {
             remainingSeconds -= 1;
             updateDisplay();
           } else {
             clearInterval(timerId);
+            keepAwake(false);
             currentState.textContent = 'Finished';
             statusText.textContent = 'Time is up.';
             startBtn.disabled = true;
@@ -400,6 +425,7 @@
 
     function resetTimer() {
       clearInterval(timerId);
+      keepAwake(false);
       timerId = null;
       isPaused = false;
       totalSeconds = readInputs() || 3600;
