@@ -4,6 +4,13 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Exam Countdown Timer</title>
+  <!-- Settings, edited from Rasmus's dashboard (Educational Tools). The page reads them when it opens.
+       messageSize: size of the message text in rem (1 rem ≈ 16 px); messageBold: true or false;
+       hours/minutes/seconds: the duration shown at the start; endAlert: minutes before the end when
+       the clock turns amber; title: the heading above the clock (empty for none). -->
+  <script id="settings" type="application/json">
+{"messageSize": 2.6, "messageBold": true, "hours": 1, "minutes": 0, "seconds": 0, "endAlert": 5, "title": ""}
+  </script>
   <style>
     :root {
       --bg: #111827;
@@ -161,6 +168,17 @@
       font-family: inherit;
     }
 
+    /* the message, large enough to read from the back row (size and weight come from the settings) */
+    #messageInput {
+      font-size: var(--message-size, 2.6rem);
+      font-weight: var(--message-weight, 700);
+      line-height: 1.25;
+      min-height: 3.2em;
+    }
+    #messageInput::placeholder { font-weight: 400; font-size: 1rem; }
+
+    .title { margin: 0 0 6px; font-size: clamp(1.4rem, 3vw, 2.2rem); font-weight: 700; }
+
     .warning-state .countdown { color: var(--warning); }
     .danger-state .countdown { color: var(--danger); }
     .ended-state .countdown {
@@ -228,6 +246,7 @@
     </div>
 
     <div class="card timer-wrap" id="timerCard">
+      <h1 class="title" id="title" hidden></h1>
       <div class="status" id="statusText">Enter a duration and press Start.</div>
       <div class="countdown" id="countdown">01:00:00</div>
       <div class="subnote">The display changes color during the final minutes.</div>
@@ -418,6 +437,21 @@
     hoursInput.addEventListener('input', syncPreviewFromInputs);
     minutesInput.addEventListener('input', syncPreviewFromInputs);
     secondsInput.addEventListener('input', syncPreviewFromInputs);
+
+    // apply the settings at the top of the file
+    try {
+      const settings = JSON.parse(document.getElementById('settings').textContent);
+      const root = document.documentElement.style;
+      if (settings.messageSize) root.setProperty('--message-size', `${settings.messageSize}rem`);
+      root.setProperty('--message-weight', settings.messageBold === false ? '400' : '700');
+      if (Number.isFinite(settings.hours)) hoursInput.value = settings.hours;
+      if (Number.isFinite(settings.minutes)) minutesInput.value = settings.minutes;
+      if (Number.isFinite(settings.seconds)) secondsInput.value = settings.seconds;
+      if (Number.isFinite(settings.endAlert)) endAlert.value = settings.endAlert;
+      const title = document.getElementById('title');
+      if (settings.title) { title.textContent = settings.title; title.hidden = false; }
+      totalSeconds = remainingSeconds = readInputs() || 3600;
+    } catch (e) { /* settings missing or invalid: keep the defaults */ }
 
     setTodayDate();
     updateDisplay();
